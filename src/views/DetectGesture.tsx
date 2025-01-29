@@ -1,47 +1,39 @@
-import { useStore } from '@/stores/DBStore';
-import { useEffect, useState } from 'react';
-import { useLocation, useNavigate } from 'react-router';
-import { PointerIcon, ThumbsDownIcon, ThumbsUpIcon } from 'lucide-react';
+import Camera from '@/components/Camera';
+import { useGestureRecognition } from '@/hooks/GestureHooks';
+import { ThumbsDownIcon, ThumbsUpIcon } from 'lucide-react';
+import { useEffect, useRef } from 'react';
+import { useNavigate, useParams } from 'react-router';
 
-const Detected = () => {
+const DetectGesture = () => {
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const { gesture, savedGesture } = useGestureRecognition(videoRef);
+
+  const { faceName } = useParams();
   const navigate = useNavigate();
-  const { state } = useLocation();
-  const { addFaces } = useStore();
-  const [time, setTime] = useState(2);
 
   useEffect(() => {
-    try {
-      addFaces(state);
-    } catch (error) {
-      console.error(error);
+    if (gesture === 'Pointing_Up' && savedGesture) {
+      navigate('/result', { state: { vote: savedGesture, faceName } });
     }
-
-    const interval = setInterval(() => {
-      setTime((prevTime) => {
-        if (prevTime <= 1) {
-          clearInterval(interval);
-          navigate('/gesture/' + state.label);
-        }
-        return prevTime - 1;
-      });
-    }, 1000);
-
-    return () => clearInterval(interval);
-  }, []);
+  }, [gesture]);
 
   return (
-    <div className="p-10 text-center text-xl leading-10">
-      <h2 className="text-3xl text-center">{state.label}, prepare to vote</h2>
-      <p>
-        <ThumbsUpIcon className="inline" /> or{' '}
-        <ThumbsDownIcon className="inline" /> to vote,
-      </p>
-      <p>
-        <PointerIcon className="inline" /> to save
-      </p>
-      <p className="text-sm">In {time}s</p>
-    </div>
+    <>
+      <section className="w-full">
+        <Camera ref={videoRef} width={800} aspect={16 / 9} />
+      </section>
+      <section className="w-full">
+        <div className="absolute top-24 left-0 p-4 bg-slate-900">
+          <p>
+            faceName: {faceName} &nbsp;
+            {gesture === 'Thumb_Up' && <ThumbsUpIcon className="inline" />}
+            {gesture === 'Thumb_Down' && <ThumbsDownIcon className="inline" />}
+          </p>
+          {gesture ? <p>Point up to save</p> : <p>Thumb up or down to vote</p>}
+        </div>
+      </section>
+    </>
   );
 };
 
-export default Detected;
+export default DetectGesture;
